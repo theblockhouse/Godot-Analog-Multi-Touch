@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const RADIUS_ALLOWANCE = 55
+const RADIUS_ALLOWANCE = 110
 const PADDING = 110
 const SCREEN_SIZE = Vector2(1024,600)
 
@@ -29,19 +29,22 @@ func _ready():
 	$Left_Stick/Analog_Big.global_position = left_analog_small.global_position
 	$Right_Stick/Analog_Big.global_position = right_analog_small.global_position
 	RADIUS = $Left_Stick.get_node('Analog_Big').texture.get_height() / 2
-	SMALL_RADIUS = 20
+	SMALL_RADIUS = int((left_analog_small.texture.get_height() / 2)  * left_analog_small.transform.get_scale().x)
 	stick1_pos = left_analog_small.global_position
 	stick2_pos = right_analog_small.global_position
 	
 func _input(event):
 	if (event is InputEventMouseButton and event.is_action_released('left_click') or (event is InputEventScreenTouch and !event.is_pressed())):
-		if left_analog_small.global_position.distance_to(event.position) < right_analog_small.global_position.distance_to(event.position):
+		if left_stick_closest(event):
 			reset_left_stick()
 		else:
 			reset_right_stick()
 
 	if event is InputEventScreenDrag and event.index >= 0:
 		move_sticks(event)
+			
+func left_stick_closest(event):
+	return left_analog_small.global_position.distance_to(event.position) < right_analog_small.global_position.distance_to(event.position)
 			
 func reset_left_stick():
 	left_analog_small.position = Vector2()
@@ -54,44 +57,27 @@ func reset_right_stick():
 func move_sticks(event):
 	if stick1_pos.distance_to(event.position) < RADIUS + RADIUS_ALLOWANCE:
 		var left_event_pos = event.position
-		move_small_analog(left_event_pos, 0)
+		move_small_stick(left_event_pos, stick1_pos, 0)
 		
 	if stick2_pos.distance_to(event.position) < RADIUS + RADIUS_ALLOWANCE:
 		var right_event_pos = event.position
-		move_small_analog(right_event_pos, 1)
+		move_small_stick(right_event_pos, stick2_pos, 1)
 		
-func move_small_analog(event_pos, stick):
-	if stick == 0:
-		move_left_stick(event_pos)
-	elif stick == 1:
-		move_right_stick(event_pos)
-		
-func move_left_stick(event_pos):
-	var dist = stick1_pos.distance_to(event_pos)
+func move_small_stick(event_pos, stick_pos, stick):
+	var dist = stick_pos.distance_to(event_pos)
     
 	if dist + SMALL_RADIUS > RADIUS:
 		dist = RADIUS - SMALL_RADIUS
 		
-	var vect = (event_pos - stick1_pos).normalized()
-	var angle = event_pos.angle_to_point(stick1_pos)
+	var vect = (event_pos - stick_pos).normalized()
+	var angle = event_pos.angle_to_point(stick_pos)
 
 	stick1_vect = vect
 	stick1_speed = dist
 	stick1_angle = angle
 	
-	left_analog_small.position = vect * dist
+	if stick:
+		right_analog_small.position = vect * dist
+	else:
+		left_analog_small.position = vect * dist
 	
-func move_right_stick(event_pos):
-	var dist = stick2_pos.distance_to(event_pos)
-        
-	if dist + SMALL_RADIUS > RADIUS:
-		dist = RADIUS - SMALL_RADIUS
-		
-	var vect = (event_pos - stick2_pos).normalized()
-	var angle = event_pos.angle_to_point(stick2_pos)
-
-	stick2_vect = vect
-	stick2_speed = dist
-	stick2_angle = angle
-	
-	right_analog_small.position = vect * dist
